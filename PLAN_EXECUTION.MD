@@ -285,16 +285,16 @@ Implementar o armazenamento de reservas e visitantes, o carregamento/restauraç�
 
 ## Tarefas
 
-* [ ] criar schema: `reservas` (codigo UNIQUE, apartamento, area, data, status/ativa), estrutura de exclusividade `(area, data)` para reservas ativas, `visitantes` (apartamento, nome, data), e estrutura que preserve códigos já emitidos
-* [ ] configurar a conexão para concorrência (ex.: modo WAL, `busy_timeout`, transação curta)
-* [ ] implementar comando de restauração: recria/limpa reservas e visitantes e recarrega de `dados/` (e sessões, conforme D10), mantendo os códigos iniciais registrados como emitidos
-* [ ] implementar leitura de áreas e apartamentos a partir de `dados/` (somente leitura)
-* [ ] implementar `listar_reservas(apartamento)` e `listar_visitantes(apartamento)` (retornando só campos do contrato)
-* [ ] implementar `area_disponivel(area, data) -> bool` sem expor dono da reserva
-* [ ] implementar gerador de código único (nunca repete códigos existentes ou cancelados)
-* [ ] implementar `criar_reserva(apartamento, area, data)` com gravação atômica: conflito de unicidade vira resultado de negócio ("data ocupada"), não exceção não tratada
-* [ ] implementar `cancelar_reserva(apartamento, ...)` que só afeta reservas do próprio apartamento e mantém o código como emitido
-* [ ] implementar `autorizar_visitante(apartamento, nome, data)`
+* [x] criar schema: `reservas` (codigo UNIQUE, apartamento, area, data, status/ativa), estrutura de exclusividade `(area, data)` para reservas ativas, `visitantes` (apartamento, nome, data), e estrutura que preserve códigos já emitidos
+* [x] configurar a conexão para concorrência (ex.: modo WAL, `busy_timeout`, transação curta)
+* [x] implementar comando de restauração: recria/limpa reservas e visitantes e recarrega de `dados/` (e sessões, conforme D10), mantendo os códigos iniciais registrados como emitidos
+* [x] implementar leitura de áreas e apartamentos a partir de `dados/` (somente leitura)
+* [x] implementar `listar_reservas(apartamento)` e `listar_visitantes(apartamento)` (retornando só campos do contrato)
+* [x] implementar `area_disponivel(area, data) -> bool` sem expor dono da reserva
+* [x] implementar gerador de código único (nunca repete códigos existentes ou cancelados)
+* [x] implementar `criar_reserva(apartamento, area, data)` com gravação atômica: conflito de unicidade vira resultado de negócio ("data ocupada"), não exceção não tratada
+* [x] implementar `cancelar_reserva(apartamento, ...)` que só afeta reservas do próprio apartamento e mantém o código como emitido
+* [x] implementar `autorizar_visitante(apartamento, nome, data)`
 
 ## Critérios de aceite
 
@@ -842,6 +842,12 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F4-2 — F2-3 resolvido:** URL absoluta `sqlite+aiosqlite:///<RAIZ>/var/sessoes.db` (via `Path.as_posix()`) funciona no Windows, inclusive com `@`, espaços e acentos no caminho. Ver `aurora/config.py::url_banco_sessoes`. A API não depende do diretório de execução.
 - **F4-3 — `.env.example`:** `GOOGLE_API_KEY` e `AURORA_MODEL` (opcional; padrão `gemini-flash-latest` em `aurora/config.py`). `var/` adicionado ao `.gitignore`.
 
+### Registro da Fase 5 (2026-09-27)
+
+- **F5-1 — Arquivos:** `aurora/dominio.py` (áreas, apartamentos, dados iniciais, `data_valida`), `aurora/banco.py` (schema + repositório), `aurora/restaurar.py` (comando). A API do repositório: `listar_reservas`, `listar_visitantes`, `area_ocupada`, `criar_reserva -> ResultadoReserva(status "criada"|"ocupada", codigo)`, `cancelar_reservas(apartamento, *, codigo, area, data)` (exige pelo menos um filtro; sempre filtra pelo apartamento), `autorizar_visitante`.
+- **F5-2 — Transações:** conexão em autocommit com `BEGIN IMMEDIATE` explícito nas escritas; `busy_timeout` de 10 s; WAL. O conflito do índice `ux_reserva_ativa` é identificado pela mensagem `UNIQUE constraint failed: reservas.area, reservas.data`; colisão de código (`reservas.codigo`) sorteia outro.
+- **F5-3 — Validação executada:** script descartável (scratchpad `valida_fase5.py`) com 22 checagens, todas OK, incluindo INSERT direto duplicado barrado pelo índice, reuso de código cancelado barrado pela PK, idempotência por `operacao_id` e 10 rodadas × 8 processos simultâneos (sempre 1 criada, 7 ocupadas, 1 no banco). `uv run aurora-restaurar` OK; `dados/` sem diff.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -862,7 +868,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 2  | Concluída | Fase 1          | Confirmação + SQLite + reinício validados em protótipo; achados F2-1..F2-11 |
 | Fase 3  | Concluída | Fase 2          | D1–D11 registradas; cada garantia mapeada para decisões |
 | Fase 4  | Concluída | Fase 3          | `uv sync` OK, ADK 2.10.0 fixado, `aurora-api` sobe na 8000, stubs criados |
-| Fase 5  | Pendente | Fase 4           |           |
+| Fase 5  | Concluída | Fase 4          | `banco.py`/`dominio.py`/`restaurar.py`; 22/22 checagens, concorrência 10x8 processos OK |
 | Fase 6  | Pendente | Fase 5           |           |
 | Fase 7  | Pendente | Fase 5           |           |
 | Fase 8  | Pendente | Fase 4           |           |
