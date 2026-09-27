@@ -579,11 +579,11 @@ Comprovar que aprovações simultâneas para a mesma área/data resultam em exat
 
 ## Tarefas
 
-* [ ] reproduzir o passo 14: sessões do 101 e do 201, ambas com pendência de salão em 2030-05-11
-* [ ] disparar as duas aprovações simultaneamente (ex.: dois `curl` com `&` no Git Bash ou `Start-Job` no PowerShell)
-* [ ] verificar ausência de erro 500 (ex.: `database is locked`) e ajustar timeout/transação se necessário
-* [ ] garantir que a perdedora recebe resposta normal informando data ocupada, sem expor dados do outro apartamento
-* [ ] repetir o teste várias vezes (datas diferentes) para reduzir chance de sucesso por acaso
+* [x] reproduzir o passo 14: sessões do 101 e do 201, ambas com pendência de salão em 2030-05-11
+* [x] disparar as duas aprovações simultaneamente (ex.: dois `curl` com `&` no Git Bash ou `Start-Job` no PowerShell)
+* [x] verificar ausência de erro 500 (ex.: `database is locked`) e ajustar timeout/transação se necessário
+* [x] garantir que a perdedora recebe resposta normal informando data ocupada, sem expor dados do outro apartamento
+* [x] repetir o teste várias vezes (datas diferentes) para reduzir chance de sucesso por acaso
 
 ## Critérios de aceite
 
@@ -914,6 +914,16 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
   - pós-reinício: 2 pendências criadas antes do reinício aprovadas com sucesso (1 reserva cada), reenvio → 409.
 - **F11-4 — Risco residual (documentar no README):** se o modelo falhar (503 após retentativas) **depois** que o ADK já gravou a function response da confirmação, a pendência deixa de aparecer. A execução da tool em si é determinística e ocorre antes da chamada ao modelo que gera o texto, mas esse cenário não foi reproduzido. Mitigação existente: retentativas no modelo e `operacao_id` idempotente.
 
+### Registro da Fase 12 (2026-09-27)
+
+- **F12-1 — Validação do passo 14** (scratchpad `valida_fase12.sh` + `disputa.py`, API real): em cada uma de 5 datas (2030-05-11 a 15), sessões do 101 e do 201 com pendência do salão; as duas aprovações foram disparadas juntas com `curl ... &` + `wait`, como o avaliador.
+  - resultado: 5/5 rodadas com as duas respostas `200` e exatamente 1 reserva somando 101 e 201;
+  - o perdedor recebe uma resposta normal ("já está ocupado"), sem citar o apartamento vencedor;
+  - o vencedor variou (201 venceu em 2030-05-15);
+  - nenhum erro nem `database is locked` no log.
+- **F12-2 — Onde a exclusividade vale:** na execução retomada (`tool_confirmation` presente), `reservar_area` **não** faz a pré-checagem de ocupação e vai direto para `banco.criar_reserva`. Logo, o "ocupada" do perdedor vem do índice único `ux_reserva_ativa` no instante do INSERT (`aurora/banco.py::criar_reserva`), e não de uma conferência anterior.
+- **F12-3 — Sem mudança de código:** as decisões D2 e D6 bastaram. O Python da API processa as tools num único processo; o `BEGIN IMMEDIATE` + `busy_timeout` cobrem também múltiplos processos (validado na Fase 5 com 8 processos).
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -941,7 +951,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 9  | Concluída | Fases 7, 8      | Agentes + App resumable; passos 3–12 com modelo real, 20/20 checagens; faturamento Tier 1 ativado |
 | Fase 10 | Concluída | Fases 6, 9      | Rotas de sessão/mensagem/eventos pela API; passos 1–7 e 404s, 19/19 checagens |
 | Fase 11 | Concluída | Fase 10         | Rota de confirmações + 409; aprovação após reinício OK; 23/23 checagens |
-| Fase 12 | Pendente | Fase 11          |           |
+| Fase 12 | Concluída | Fase 11         | Passo 14 em 5 datas com 2 curl simultâneos: sempre 200/200 e 1 reserva; sem mudança de código |
 | Fase 13 | Pendente | Fase 11          |           |
 | Fase 14 | Pendente | Fases 12, 13     |           |
 | Fase 15 | Pendente | Fase 14          |           |
