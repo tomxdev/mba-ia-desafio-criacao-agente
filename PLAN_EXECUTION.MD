@@ -733,13 +733,13 @@ Publicar a entrega no fork público, na branch `main`.
 
 ## Tarefas
 
-* [ ] conferir `git status` limpo, `.env` fora do Git, `uv.lock` versionado
-* [ ] conferir `git diff be87e1d -- dados/` vazio
-* [ ] **(com autorização do usuário)** fazer push das branches de contexto para o fork (`origin`)
-* [ ] abrir os PRs no fork, na ordem da seção "Estratégia de versionamento", com `--repo tomxdev/mba-ia-desafio-criacao-agente`
-* [ ] mergear os PRs em ordem (merge commit), conferindo que cada um fica sem conflito antes do próximo
-* [ ] conferir que `main` do fork contém toda a entrega (`git log origin/main`)
-* [ ] conferir no GitHub que o fork é público e que o README renderiza corretamente
+* [x] conferir `git status` limpo, `.env` fora do Git, `uv.lock` versionado
+* [x] conferir `git diff be87e1d -- dados/` vazio
+* [x] **(com autorização do usuário)** fazer push das branches de contexto para o fork (`origin`)
+* [x] abrir os PRs no fork, na ordem da seção "Estratégia de versionamento", com `--repo tomxdev/mba-ia-desafio-criacao-agente`
+* [x] mergear os PRs em ordem (merge commit), conferindo que cada um fica sem conflito antes do próximo
+* [x] conferir que `main` do fork contém toda a entrega (`git log origin/main`)
+* [x] conferir no GitHub que o fork é público e que o README renderiza corretamente
 
 ## Critérios de aceite
 
@@ -961,6 +961,25 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F15-4 — Correção encontrada na validação:** o exemplo de `curl` com "salão" falhou no Windows (Git Bash + `curl.exe` enviam o acento fora de UTF-8 → `There was an error parsing the body`). O exemplo passou a usar o escape JSON `salão`, conferido contra a API (o ADK recebeu "salão" e a pendência foi criada), e o README ganhou uma nota explicando.
 - **F15-5 — Pendente para a Fase 16:** conferir a renderização do README (mermaid e links `#Lx-Ly`) no GitHub após o push.
 
+### Registro da Fase 16 (2026-09-27)
+
+- **F16-1 — Publicação:** push das 6 branches de contexto para `origin` (https://github.com/tomxdev/mba-ia-desafio-criacao-agente, **público**). PRs abertos com `--repo tomxdev/...` e mergeados em ordem (merge commit):
+  - #1 `feat/fundacao`
+  - #2 `feat/camada-dados`
+  - #3 `feat/tools-agentes`
+  - #4 `feat/runtime-confirmacoes`
+  - #5 `feat/garantias`
+  - #6 `docs/readme`
+
+  Nenhum PR foi aberto no repositório original (`devfullcycle`). Este registro vai no PR #7 (`docs/entrega`).
+- **F16-2 — Conferências pós-merge na `main` do fork:**
+  - README servido pelo GitHub, com as seções Arquitetura, Garantias e Como rodar;
+  - os 14 arquivos citados existem;
+  - o bloco mermaid é reconhecido pelo renderizador GFM;
+  - clone via HTTPS → `cp .env.example .env` → `uv sync` → `uv run aurora-restaurar` → `uv run aurora-api` → passo 1 OK (`RSV-1377`, Marina Duarte);
+  - `dados/` idêntico a `be87e1d`; `google-adk[db]==2.10.0`.
+- **F16-3 — Estado final:** todas as 16 fases concluídas. Entregável: link do fork público acima, com tudo na `main`.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -992,7 +1011,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 13 | Concluída | Fase 11         | Passo 13 após kill forçado: 60 eventos idênticos, sessão continua, dados e códigos OK; 11/11 |
 | Fase 14 | Concluída | Fases 12, 13    | Fluxo 1–15 em clone limpo, 2 variantes de redação: tudo OK, sem erros no log |
 | Fase 15 | Concluída | Fase 14         | README com Arquitetura, Garantias (21 links conferidos) e Como rodar; comandos validados em clone limpo |
-| Fase 16 | Pendente | Fase 15          |           |
+| Fase 16 | Concluída | Fase 15         | PRs #1–#6 mergeados em ordem na `main` do fork público; clone HTTPS validado |
 
 Status possíveis: `Pendente`, `Em andamento`, `Bloqueada`, `Concluída`.
 
