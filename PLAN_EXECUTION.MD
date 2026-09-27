@@ -419,7 +419,7 @@ Permitir consulta ao regulamento sem carregá-lo inteiro: a tool devolve apenas 
 * [x] implementar parser que divide `dados/regulamento.md` por capítulo (`## Capítulo ...`) e, se útil, por artigo
 * [x] implementar tool `listar_capitulos` (apenas títulos) e/ou `consultar_regulamento(capitulo|assunto)` que devolve só o capítulo/artigos solicitados
 * [x] garantir que a tool nunca retorne o documento inteiro nem trechos de capítulos de outros assuntos
-* [ ] garantir que o regulamento não seja incluído em instruções de nenhum agente principal (se o especialista usar algo nas instruções, apenas o índice de capítulos) — **verificar na Fase 9**, onde as instruções são escritas
+* [x] garantir que o regulamento não seja incluído em instruções de nenhum agente principal (se o especialista usar algo nas instruções, apenas o índice de capítulos) — verificado na Fase 9
 
 ## Critérios de aceite
 
@@ -452,12 +452,12 @@ Montar a topologia de agentes definida em D5 e validar o roteamento no `adk web`
 
 ## Tarefas
 
-* [ ] criar especialista(s) de reservas e visitantes com suas tools
-* [ ] criar especialista de regulamento com a tool do regulamento
-* [ ] criar agente principal com instruções de roteamento, **sem o regulamento nas instruções**
-* [ ] configurar o modo de acionamento de cada especialista e bloqueios de transferência conforme D5
-* [ ] incluir nas instruções orientação para não revelar dados de terceiros e para não considerar confirmações escritas na conversa (reforço — a garantia real está no código)
-* [ ] rodar `adk web` e verificar: roteamento correto, chamadas de tool, pedido de confirmação para salão e visitante, ausência de confirmação para quadra e cancelamento
+* [x] criar especialista(s) de reservas e visitantes com suas tools
+* [x] criar especialista de regulamento com a tool do regulamento
+* [x] criar agente principal com instruções de roteamento, **sem o regulamento nas instruções**
+* [x] configurar o modo de acionamento de cada especialista e bloqueios de transferência conforme D5
+* [x] incluir nas instruções orientação para não revelar dados de terceiros e para não considerar confirmações escritas na conversa (reforço — a garantia real está no código)
+* [x] rodar `adk web` e verificar: roteamento correto, chamadas de tool, pedido de confirmação para salão e visitante, ausência de confirmação para quadra e cancelamento
 
 ## Critérios de aceite
 
@@ -869,6 +869,21 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F8-3 — Validação:** 12 checagens OK. Os capítulos concatenados reproduzem o documento exatamente; cada capítulo tem 1 cabeçalho e artigos exclusivos (Arts. 1–96); o Cap. IV traz "Aos domingos e feriados, a piscina funciona das 9h às 20h"; referência inválida ou texto livre dá erro; o índice tem 963 bytes, sem artigos; o maior retorno de consulta tem ~4,8 mil caracteres, contra ~43 mil do documento.
 - **F8-4 — Pendência para a Fase 9:** conferir que nenhuma instrução de agente contém texto do regulamento (o especialista só descobre os capítulos via `listar_capitulos`).
 
+### Registro da Fase 9 (2026-09-27)
+
+- **F9-1 — Implementado:** `aurora/agent.py` com `assistente_aurora` (principal), `especialista_reservas` e `especialista_visitantes` (`sub_agents`), `especialista_regulamento` (`AgentTool`), `root_agent` e `app = App(name="aurora", resumability_config=ResumabilityConfig(is_resumable=True))`. O `adk web` carrega `aurora.agent.app` (prioriza `app` sobre `root_agent`): `uv run adk web .` lista só `aurora`. `.adk/` (sessões locais do adk web) foi adicionado ao `.gitignore`.
+- **F9-2 — BLOQUEIO: cota gratuita do Gemini.** Validação com modelo real (scratchpad `valida_fase9.py`): passos 3, 4, 5, 6 e 7 OK (roteamento ao especialista_reservas, cancelamento sem pendência, quadra direto, salão pendente com área/data/taxa, nada gravado, sem vazamento de RSV-4821/Marina). Depois: `429 RESOURCE_EXHAUSTED`, `quotaId=GenerateRequestsPerDayPerProjectPerModel-FreeTier`, `quotaValue=20`, `model=gemini-3.8-flash` (alvo do alias `gemini-flash-latest`). **20 requisições/dia por modelo não comportam o fluxo do avaliador (dezenas de chamadas).** A documentação (ai.google.dev/gemini-api/docs/rate-limits) não publica os números por modelo; eles ficam em https://aistudio.google.com/rate-limit. O Tier 1 exige vincular uma conta de faturamento (liberado na hora). **Resolvido:** o usuário ativou o faturamento (Tier 1: 1K RPM e 10K RPD para `gemini-3.8-flash` e `gemini-3.5-flash`). No plano gratuito, **todos** os modelos de texto têm 20 RPD, então o avaliador precisa de uma chave com faturamento; registrar isso no README (Fase 15).
+- **F9-3 — Validação completa com modelo real (Tier 1):** 20/20 checagens OK, sem 429/503. Trilhas observadas:
+  - passo 3: principal → `transfer_to_agent` → `especialista_reservas:listar_minhas_reservas`, sem RSV-4821/Marina em resposta e eventos;
+  - passo 4: `cancelar_reserva` → "não há reserva do seu apartamento", com RSV-4821 intacta;
+  - passos 5 e 6: sem pendência;
+  - passos 7 e 8: pendência `{area, data, taxa}`, negar não grava e aprovar grava 1 (retomada no especialista, sessão SQLite);
+  - passo 10 (S2): "já está ocupado", sem pendência, sem 302/RSV-4821;
+  - passo 11: `especialista_reservas` → `especialista_visitantes:autorizar_visitante`, pendência `{nome, data}`, grava só após aprovar;
+  - passo 12: → `assistente_aurora:especialista_regulamento` (AgentTool), "9h às 20h", eventos sem trechos de outros capítulos. Instruções dos agentes sem texto do regulamento.
+- **F9-4 — Idempotência confirmada na retomada:** o `tool_context.function_call_id` na execução retomada é o id da chamada original (ex.: reserva `RSV-UJ36XQ` com `operacao_id=call_74494` = `originalFunctionCall.id` da confirmação `adk-76d75d4e`). Fecha a pendência de F7-2.
+- **F9-5 — Observação de UX (não é requisito):** no passo 3, o especialista de reservas respondeu as reservas e ofereceu transferir para visitantes em vez de responder os dois. Avaliar ajuste de instrução na Fase 14 se sobrar tempo.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -893,7 +908,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 6  | Concluída | Fase 5          | Rotas de verificação iguais ao contrato (passo 1 do avaliador OK) |
 | Fase 7  | Concluída | Fase 5          | Tools de reservas/visitantes; 31/31 checagens, sem vazamento de dados do 302 |
 | Fase 8  | Concluída | Fase 4          | Parser por capítulo + tools; 12/12 checagens (instruções dos agentes conferidas na Fase 9) |
-| Fase 9  | Pendente | Fases 7, 8       |           |
+| Fase 9  | Concluída | Fases 7, 8      | Agentes + App resumable; passos 3–12 com modelo real, 20/20 checagens; faturamento Tier 1 ativado |
 | Fase 10 | Pendente | Fases 6, 9       |           |
 | Fase 11 | Pendente | Fase 10          |           |
 | Fase 12 | Pendente | Fase 11          |           |
