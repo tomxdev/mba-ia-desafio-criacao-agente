@@ -416,10 +416,10 @@ Permitir consulta ao regulamento sem carregá-lo inteiro: a tool devolve apenas 
 
 ## Tarefas
 
-* [ ] implementar parser que divide `dados/regulamento.md` por capítulo (`## Capítulo ...`) e, se útil, por artigo
-* [ ] implementar tool `listar_capitulos` (apenas títulos) e/ou `consultar_regulamento(capitulo|assunto)` que devolve só o capítulo/artigos solicitados
-* [ ] garantir que a tool nunca retorne o documento inteiro nem trechos de capítulos de outros assuntos
-* [ ] garantir que o regulamento não seja incluído em instruções de nenhum agente principal (se o especialista usar algo nas instruções, apenas o índice de capítulos)
+* [x] implementar parser que divide `dados/regulamento.md` por capítulo (`## Capítulo ...`) e, se útil, por artigo
+* [x] implementar tool `listar_capitulos` (apenas títulos) e/ou `consultar_regulamento(capitulo|assunto)` que devolve só o capítulo/artigos solicitados
+* [x] garantir que a tool nunca retorne o documento inteiro nem trechos de capítulos de outros assuntos
+* [ ] garantir que o regulamento não seja incluído em instruções de nenhum agente principal (se o especialista usar algo nas instruções, apenas o índice de capítulos) — **verificar na Fase 9**, onde as instruções são escritas
 
 ## Critérios de aceite
 
@@ -862,6 +862,13 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F7-4 — Declarações no ADK 2:** o schema dos parâmetros fica em `FunctionDeclaration.parameters_json_schema` (e não em `parameters`). Conferido: nenhuma tool expõe `apartamento` ou `tool_context` ao modelo.
 - **F7-5 — Validação:** script descartável `valida_fase7.py` com `ToolContext` simulado, 31 checagens OK, cobrindo os cenários dos passos 3–8, 10 e 11 no nível das tools. A varredura de todos os retornos da sessão do 101 não encontrou `RSV-4821`, `Marina Duarte` nem `302` isolado.
 
+### Registro da Fase 8 (2026-09-27)
+
+- **F8-1 — Arquivos:** `aurora/regulamento.py` (`capitulos()` e `buscar_capitulo()`) e `aurora/tools/regulamento.py` (`listar_capitulos`, só número e tema; `consultar_capitulo(capitulo)`, com um capítulo por vez e referência em romano ou arábico, com ou sem "Capítulo").
+- **F8-2 — Formato do arquivo:** 14 cabeçalhos `## Capítulo <romano>: <tema>`, sem subtítulos; o arquivo fica com CRLF na cópia de trabalho do Windows (`autocrlf`), então o parser normaliza para LF. Os Arts. 1º–9º usam ordinal (`Art. 1º`) e os demais `Art. 10.`.
+- **F8-3 — Validação:** 12 checagens OK. Os capítulos concatenados reproduzem o documento exatamente; cada capítulo tem 1 cabeçalho e artigos exclusivos (Arts. 1–96); o Cap. IV traz "Aos domingos e feriados, a piscina funciona das 9h às 20h"; referência inválida ou texto livre dá erro; o índice tem 963 bytes, sem artigos; o maior retorno de consulta tem ~4,8 mil caracteres, contra ~43 mil do documento.
+- **F8-4 — Pendência para a Fase 9:** conferir que nenhuma instrução de agente contém texto do regulamento (o especialista só descobre os capítulos via `listar_capitulos`).
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -885,7 +892,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 5  | Concluída | Fase 4          | `banco.py`/`dominio.py`/`restaurar.py`; 22/22 checagens, concorrência 10x8 processos OK |
 | Fase 6  | Concluída | Fase 5          | Rotas de verificação iguais ao contrato (passo 1 do avaliador OK) |
 | Fase 7  | Concluída | Fase 5          | Tools de reservas/visitantes; 31/31 checagens, sem vazamento de dados do 302 |
-| Fase 8  | Pendente | Fase 4           |           |
+| Fase 8  | Concluída | Fase 4          | Parser por capítulo + tools; 12/12 checagens (instruções dos agentes conferidas na Fase 9) |
 | Fase 9  | Pendente | Fases 7, 8       |           |
 | Fase 10 | Pendente | Fases 6, 9       |           |
 | Fase 11 | Pendente | Fase 10          |           |
