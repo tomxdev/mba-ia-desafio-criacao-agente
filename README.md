@@ -172,6 +172,8 @@ curl -s -X POST localhost:8000/sessoes/$SID/mensagens -H "Content-Type: applicat
   -d '{"texto": "Reserve o salão de festas para 2030-04-20."}'
 ```
 
+O corpo precisa ser JSON em UTF-8. No Windows, o `curl` pode enviar acentos digitados na linha de comando em outra codificação (a API responde `There was an error parsing the body`); por isso o exemplo usa o escape JSON `ã` para "ã".
+
 ### Decisões e limitações
 
 - **Comportamentos livres pelo enunciado:**

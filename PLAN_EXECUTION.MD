@@ -695,11 +695,11 @@ Substituir o enunciado por um `README.md` com Arquitetura, Garantias e Como roda
 
 ## Tarefas
 
-* [ ] seção **Arquitetura**: cada agente, responsabilidade, forma de acionamento e motivo (reaproveitar D5)
-* [ ] seção **Garantias**: para G1–G5, arquivo + trecho/função + por que não depende do modelo
-* [ ] seção **Como rodar**: pré-requisitos (Python, uv), variáveis do `.env`, `uv sync`, comando de restauração, comando de subida, serviços externos (se houver)
-* [ ] conferir que todos os caminhos e nomes citados existem no repositório
-* [ ] seguir o README "do zero" em clone limpo para confirmar que os comandos funcionam
+* [x] seção **Arquitetura**: cada agente, responsabilidade, forma de acionamento e motivo (reaproveitar D5)
+* [x] seção **Garantias**: para G1–G5, arquivo + trecho/função + por que não depende do modelo
+* [x] seção **Como rodar**: pré-requisitos (Python, uv), variáveis do `.env`, `uv sync`, comando de restauração, comando de subida, serviços externos (se houver)
+* [x] conferir que todos os caminhos e nomes citados existem no repositório
+* [x] seguir o README "do zero" em clone limpo para confirmar que os comandos funcionam
 
 ## Critérios de aceite
 
@@ -950,6 +950,17 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
   - passo 15: ADK `==2.10.0` no `pyproject.toml` e no `uv.lock`; `dados/` sem diff contra `be87e1d`; `.env` fora do Git; `.env.example` sem valor; a chave real ausente dos arquivos versionados e de todo o histórico; principal + 3 especialistas; nenhuma tool com parâmetro `apartamento`; principal sem regulamento; índice único parcial em `aurora/banco.py`.
 - **F14-4 — Pendente para a Fase 15:** a conferência da seção Garantias do README (passo 15) só é possível depois de escrito o README.
 
+### Registro da Fase 15 (2026-09-27)
+
+- **F15-1 — README:** substitui o enunciado (preservado em `git show be87e1d:README.md`) e contém:
+  - **Arquitetura:** diagrama mermaid, tabela de agentes (responsabilidade, acionamento e motivo), camadas, armazenamento e fluxo de uma confirmação;
+  - **Garantias:** G1–G5, cada uma com links `arquivo#Lx-Ly` e "por que não depende do modelo";
+  - **Como rodar:** pré-requisitos, com aviso de faturamento (Tier 1), variáveis do `.env`, comandos, rotas, exemplo e decisões/limitações (422, `user_id` fixo, risco residual F11-4).
+- **F15-2 — Links conferidos:** um script extraiu os 21 links de código do README e confirmou que todos os arquivos existem, que todos os intervalos cabem no arquivo e que a primeira e a última linha de cada trecho são o código descrito. Dois intervalos foram apertados para terminar na última linha da função.
+- **F15-3 — "Como rodar" em clone limpo** (`docs/readme`): `cp .env.example .env` → `uv sync` → `uv run aurora-restaurar` → `uv run aurora-api` → rotas de verificação OK (`RSV-1377`, Marina Duarte); `uv run adk web . --port 8001` lista `aurora`.
+- **F15-4 — Correção encontrada na validação:** o exemplo de `curl` com "salão" falhou no Windows (Git Bash + `curl.exe` enviam o acento fora de UTF-8 → `There was an error parsing the body`). O exemplo passou a usar o escape JSON `salão`, conferido contra a API (o ADK recebeu "salão" e a pendência foi criada), e o README ganhou uma nota explicando.
+- **F15-5 — Pendente para a Fase 16:** conferir a renderização do README (mermaid e links `#Lx-Ly`) no GitHub após o push.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -980,7 +991,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 12 | Concluída | Fase 11         | Passo 14 em 5 datas com 2 curl simultâneos: sempre 200/200 e 1 reserva; sem mudança de código |
 | Fase 13 | Concluída | Fase 11         | Passo 13 após kill forçado: 60 eventos idênticos, sessão continua, dados e códigos OK; 11/11 |
 | Fase 14 | Concluída | Fases 12, 13    | Fluxo 1–15 em clone limpo, 2 variantes de redação: tudo OK, sem erros no log |
-| Fase 15 | Pendente | Fase 14          |           |
+| Fase 15 | Concluída | Fase 14         | README com Arquitetura, Garantias (21 links conferidos) e Como rodar; comandos validados em clone limpo |
 | Fase 16 | Pendente | Fase 15          |           |
 
 Status possíveis: `Pendente`, `Em andamento`, `Bloqueada`, `Concluída`.
