@@ -654,13 +654,13 @@ Rodar os passos 1 a 15 do fluxo do avaliador de ponta a ponta, em clone limpo, e
 
 ## Tarefas
 
-* [ ] clonar o repositório em pasta temporária, copiar `.env.example` → `.env`, preencher chave, `uv sync`
-* [ ] executar comandos de restauração e subida exatamente como estarão no README
-* [ ] executar passos 1 a 14 com `curl`, conferindo cada verificação (incluindo buscas por `RSV-4821`, `Marina Duarte` e `302` isolado nas respostas e eventos)
-* [ ] no passo 12, conferir que os eventos não contêm trechos de outros capítulos do regulamento e que a resposta traz 20h
-* [ ] executar o checklist do passo 15 (versão ADK, `dados/` idênticos, sem chaves, agentes, tools, apartamento da sessão, instruções do principal, exclusividade)
-* [ ] repetir o fluxo ao menos uma vez com redação variada das mensagens
-* [ ] registrar falhas encontradas e correções aplicadas neste plano
+* [x] clonar o repositório em pasta temporária, copiar `.env.example` → `.env`, preencher chave, `uv sync`
+* [x] executar comandos de restauração e subida exatamente como estarão no README
+* [x] executar passos 1 a 14 com `curl`, conferindo cada verificação (incluindo buscas por `RSV-4821`, `Marina Duarte` e `302` isolado nas respostas e eventos)
+* [x] no passo 12, conferir que os eventos não contêm trechos de outros capítulos do regulamento e que a resposta traz 20h
+* [x] executar o checklist do passo 15 (versão ADK, `dados/` idênticos, sem chaves, agentes, tools, apartamento da sessão, instruções do principal, exclusividade)
+* [x] repetir o fluxo ao menos uma vez com redação variada das mensagens
+* [x] registrar falhas encontradas e correções aplicadas neste plano
 
 ## Critérios de aceite
 
@@ -882,7 +882,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
   - passo 11: `especialista_reservas` → `especialista_visitantes:autorizar_visitante`, pendência `{nome, data}`, grava só após aprovar;
   - passo 12: → `assistente_aurora:especialista_regulamento` (AgentTool), "9h às 20h", eventos sem trechos de outros capítulos. Instruções dos agentes sem texto do regulamento.
 - **F9-4 — Idempotência confirmada na retomada:** o `tool_context.function_call_id` na execução retomada é o id da chamada original (ex.: reserva `RSV-UJ36XQ` com `operacao_id=call_74494` = `originalFunctionCall.id` da confirmação `adk-76d75d4e`). Fecha a pendência de F7-2.
-- **F9-5 — Observação de UX (não é requisito):** no passo 3, o especialista de reservas respondeu as reservas e ofereceu transferir para visitantes em vez de responder os dois. Avaliar ajuste de instrução na Fase 14 se sobrar tempo.
+- **F9-5 — Observação de UX (não é requisito):** no passo 3, o especialista de reservas respondeu as reservas e ofereceu transferir para visitantes em vez de responder os dois. **Ajustado na Fase 14** (commit `fix: pedido com reservas e visitantes é respondido sem perguntar`).
 
 ### Registro da Fase 10 (2026-09-27)
 
@@ -935,6 +935,21 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F13-2 — Sem mudança de código:** a persistência vem de D2 (domínio em `var/aurora.db`, WAL) e D3 (sessões em `var/sessoes.db` via `DatabaseSessionService`).
 - **F13-3 — Observação:** as respostas dos passos 3–12 pela API bateram com o esperado em todos os pontos do avaliador. A UX do passo 3 ("posso transferir para visitantes") segue a observação F9-5.
 
+### Registro da Fase 14 (2026-09-27)
+
+- **F14-1 — Ajuste de instrução:** em pedidos combinados (reservas + visitantes), o `especialista_reservas` responde a sua parte e transfere direto para o `especialista_visitantes`, sem perguntar ao morador (F9-5). Na execução original, o passo 3 passou a listar reservas e visitantes do próprio apartamento na mesma resposta.
+- **F14-2 — Roteiro do avaliador em clone limpo** (scratchpad `valida_fase14.sh`, `valida_fluxo.py`, `disputa.py`, `cliente.py`):
+  - `git clone -b feat/garantias` → `.env.example` copiado para `.env` com a chave → `uv sync` → `uv run aurora-restaurar` → `uv run aurora-api`;
+  - passos 1–12 → derruba e sobe a API sem restaurar → passo 13 → passo 14 com dois `curl &` → conferências do passo 15 no clone;
+  - o clone fica em `%TEMP%/aurora-clone`, porque o caminho do scratchpad excede o limite do Windows (`Filename too long`); ele é apagado ao final;
+  - os scripts de validação ficaram fora do repositório: testes automatizados estão fora de escopo e eles dependem de uma chave real.
+- **F14-3 — Resultado:** duas execuções completas, ambas 100% OK e sem nenhum erro no log da API:
+  - `original`: frases exatas do enunciado;
+  - `variado`: redação diferente e datas por extenso ou em DD/MM/AAAA (o modelo converteu para AAAA-MM-DD);
+  - destaques: passo 10 sem `302` isolado; no passo 12, nenhum dos 81 inícios de artigos dos outros 13 capítulos aparece nos eventos; passo 13 com os eventos idênticos após o reinício (68 e 56); passo 14 com as duas respostas `200` e 1 reserva;
+  - passo 15: ADK `==2.10.0` no `pyproject.toml` e no `uv.lock`; `dados/` sem diff contra `be87e1d`; `.env` fora do Git; `.env.example` sem valor; a chave real ausente dos arquivos versionados e de todo o histórico; principal + 3 especialistas; nenhuma tool com parâmetro `apartamento`; principal sem regulamento; índice único parcial em `aurora/banco.py`.
+- **F14-4 — Pendente para a Fase 15:** a conferência da seção Garantias do README (passo 15) só é possível depois de escrito o README.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -964,7 +979,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 11 | Concluída | Fase 10         | Rota de confirmações + 409; aprovação após reinício OK; 23/23 checagens |
 | Fase 12 | Concluída | Fase 11         | Passo 14 em 5 datas com 2 curl simultâneos: sempre 200/200 e 1 reserva; sem mudança de código |
 | Fase 13 | Concluída | Fase 11         | Passo 13 após kill forçado: 60 eventos idênticos, sessão continua, dados e códigos OK; 11/11 |
-| Fase 14 | Pendente | Fases 12, 13     |           |
+| Fase 14 | Concluída | Fases 12, 13    | Fluxo 1–15 em clone limpo, 2 variantes de redação: tudo OK, sem erros no log |
 | Fase 15 | Pendente | Fase 14          |           |
 | Fase 16 | Pendente | Fase 15          |           |
 
