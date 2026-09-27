@@ -333,10 +333,10 @@ Subir a API em `http://localhost:8000` com as rotas de verificação funcionando
 
 ## Tarefas
 
-* [ ] criar app web (D1) e o comando de subida na porta 8000
-* [ ] implementar `GET /apartamentos/{numero}/reservas` → `[{"codigo","area","data"}]` (somente reservas ativas)
-* [ ] implementar `GET /apartamentos/{numero}/visitantes` → `[{"nome","data"}]`
-* [ ] garantir respostas JSON e códigos de status do contrato
+* [x] criar app web (D1) e o comando de subida na porta 8000
+* [x] implementar `GET /apartamentos/{numero}/reservas` → `[{"codigo","area","data"}]` (somente reservas ativas)
+* [x] implementar `GET /apartamentos/{numero}/visitantes` → `[{"nome","data"}]`
+* [x] garantir respostas JSON e códigos de status do contrato
 
 ## Critérios de aceite
 
@@ -848,6 +848,12 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F5-2 — Transações:** conexão em autocommit com `BEGIN IMMEDIATE` explícito nas escritas; `busy_timeout` de 10 s; WAL. O conflito do índice `ux_reserva_ativa` é identificado pela mensagem `UNIQUE constraint failed: reservas.area, reservas.data`; colisão de código (`reservas.codigo`) sorteia outro.
 - **F5-3 — Validação executada:** script descartável (scratchpad `valida_fase5.py`) com 22 checagens, todas OK, incluindo INSERT direto duplicado barrado pelo índice, reuso de código cancelado barrado pela PK, idempotência por `operacao_id` e 10 rodadas × 8 processos simultâneos (sempre 1 criada, 7 ocupadas, 1 no banco). `uv run aurora-restaurar` OK; `dados/` sem diff.
 
+### Registro da Fase 6 (2026-09-27)
+
+- **F6-1 — Rotas:** `GET /apartamentos/{numero}/reservas` e `/visitantes` em `aurora/api.py`, com `response_model` Pydantic (só os campos do contrato). Endpoints síncronos (`def`) para o FastAPI rodar o SQLite no threadpool, sem bloquear o loop async do Runner.
+- **F6-2 — Startup:** `lifespan` chama `banco.criar_schema()` (idempotente); a carga dos dados iniciais continua sendo papel de `aurora-restaurar`.
+- **F6-3 — Validação:** `aurora-restaurar` + `aurora-api` + `curl`: 101 → `[{"codigo":"RSV-1377","area":"quadra","data":"2030-03-09"}]`; 302 visitantes → `[{"nome":"Marina Duarte","data":"2030-03-16"}]`; apartamento inexistente → `[]` (comportamento livre pelo enunciado). Sem erros no log.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -869,7 +875,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 3  | Concluída | Fase 2          | D1–D11 registradas; cada garantia mapeada para decisões |
 | Fase 4  | Concluída | Fase 3          | `uv sync` OK, ADK 2.10.0 fixado, `aurora-api` sobe na 8000, stubs criados |
 | Fase 5  | Concluída | Fase 4          | `banco.py`/`dominio.py`/`restaurar.py`; 22/22 checagens, concorrência 10x8 processos OK |
-| Fase 6  | Pendente | Fase 5           |           |
+| Fase 6  | Concluída | Fase 5          | Rotas de verificação iguais ao contrato (passo 1 do avaliador OK) |
 | Fase 7  | Pendente | Fase 5           |           |
 | Fase 8  | Pendente | Fase 4           |           |
 | Fase 9  | Pendente | Fases 7, 8       |           |
