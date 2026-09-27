@@ -617,12 +617,12 @@ Comprovar que parar e subir a API preserva sessões, eventos e dados, e que a se
 
 ## Tarefas
 
-* [ ] criar sessão, trocar mensagens com chamadas de tool e anotar a quantidade de eventos
-* [ ] parar a API com Ctrl+C e subir novamente com o mesmo comando, sem restaurar dados
-* [ ] conferir que `GET /sessoes/{id}/eventos` retorna a mesma quantidade
-* [ ] enviar nova mensagem ("Quais são as minhas reservas agora?") e conferir `200` e aumento de eventos
-* [ ] conferir reservas, cancelamentos e visitantes nas rotas de verificação
-* [ ] conferir que códigos criados são únicos e diferentes de `RSV-1377`, `RSV-4821`, `RSV-2950`
+* [x] criar sessão, trocar mensagens com chamadas de tool e anotar a quantidade de eventos
+* [x] parar a API com Ctrl+C e subir novamente com o mesmo comando, sem restaurar dados
+* [x] conferir que `GET /sessoes/{id}/eventos` retorna a mesma quantidade
+* [x] enviar nova mensagem ("Quais são as minhas reservas agora?") e conferir `200` e aumento de eventos
+* [x] conferir reservas, cancelamentos e visitantes nas rotas de verificação
+* [x] conferir que códigos criados são únicos e diferentes de `RSV-1377`, `RSV-4821`, `RSV-2950`
 
 ## Critérios de aceite
 
@@ -924,6 +924,17 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F12-2 — Onde a exclusividade vale:** na execução retomada (`tool_confirmation` presente), `reservar_area` **não** faz a pré-checagem de ocupação e vai direto para `banco.criar_reserva`. Logo, o "ocupada" do perdedor vem do índice único `ux_reserva_ativa` no instante do INSERT (`aurora/banco.py::criar_reserva`), e não de uma conferência anterior.
 - **F12-3 — Sem mudança de código:** as decisões D2 e D6 bastaram. O Python da API processa as tools num único processo; o `BEGIN IMMEDIATE` + `busy_timeout` cobrem também múltiplos processos (validado na Fase 5 com 8 processos).
 
+### Registro da Fase 13 (2026-09-27)
+
+- **F13-1 — Validação do passo 13** (scratchpad `valida_fase13.sh` + `valida_fase13.py`, API real): passos 2–12 numa S1 do 101 (e S2 no passo 10), anotando 60 eventos. A API foi derrubada com `taskkill /F` (mais severo que o Ctrl+C do avaliador) e subida de novo com `uv run aurora-api`, sem restaurar. Resultado, 11/11 OK:
+  - `GET /sessoes/{S1}/eventos` devolve os mesmos 60 eventos, idênticos em conteúdo e ordem;
+  - "Quais são as minhas reservas agora?" → `200`, e os eventos vão de 60 para 68;
+  - 101 com quadra 2030-04-06 e salão 2030-04-20, sem `RSV-1377`, com Joana Ribeiro 2030-04-21;
+  - códigos do fluxo (`RSV-O3VX1N`, `RSV-JAV25S`) distintos entre si e de `RSV-1377/4821/2950`;
+  - 302 mantém `RSV-4821`.
+- **F13-2 — Sem mudança de código:** a persistência vem de D2 (domínio em `var/aurora.db`, WAL) e D3 (sessões em `var/sessoes.db` via `DatabaseSessionService`).
+- **F13-3 — Observação:** as respostas dos passos 3–12 pela API bateram com o esperado em todos os pontos do avaliador. A UX do passo 3 ("posso transferir para visitantes") segue a observação F9-5.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -952,7 +963,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 10 | Concluída | Fases 6, 9      | Rotas de sessão/mensagem/eventos pela API; passos 1–7 e 404s, 19/19 checagens |
 | Fase 11 | Concluída | Fase 10         | Rota de confirmações + 409; aprovação após reinício OK; 23/23 checagens |
 | Fase 12 | Concluída | Fase 11         | Passo 14 em 5 datas com 2 curl simultâneos: sempre 200/200 e 1 reserva; sem mudança de código |
-| Fase 13 | Pendente | Fase 11          |           |
+| Fase 13 | Concluída | Fase 11         | Passo 13 após kill forçado: 60 eventos idênticos, sessão continua, dados e códigos OK; 11/11 |
 | Fase 14 | Pendente | Fases 12, 13     |           |
 | Fase 15 | Pendente | Fase 14          |           |
 | Fase 16 | Pendente | Fase 15          |           |
