@@ -371,16 +371,16 @@ Implementar as tools ADK de domínio, amarradas ao apartamento da sessão, sem e
 
 ## Tarefas
 
-* [ ] implementar helper que obtém o apartamento **exclusivamente** de `tool_context.state` (chave definida na criação da sessão) e falha de forma segura se ausente
-* [ ] garantir que **nenhuma** tool receba parâmetro `apartamento` escolhido pelo modelo (ou, se receber, que seja validado contra o da sessão)
-* [ ] tool `listar_minhas_reservas`
-* [ ] tool `verificar_disponibilidade(area, data)` → retorna só `livre`/`ocupada`
-* [ ] tool `reservar_area(area, data)`: validar área existente; decidir confirmação pela **taxa lida do `areas.json`** (taxa > 0 → exige confirmação; taxa 0 → executa direto); conflito retorna mensagem de "data ocupada" sem código/apartamento do dono
-* [ ] incluir em `detalhes` da confirmação de reserva: `area` e `data` (e taxa, opcional)
-* [ ] tool `cancelar_reserva(...)` sem confirmação, só sobre reservas do apartamento da sessão; "não encontrada" sem revelar reservas alheias
-* [ ] tool `listar_meus_visitantes`
-* [ ] tool `autorizar_visitante(nome, data)` sempre exigindo confirmação, com `nome` e `data` em `detalhes`
-* [ ] revisar todos os retornos das tools para que nunca contenham código, apartamento ou nome de outro apartamento
+* [x] implementar helper que obtém o apartamento **exclusivamente** de `tool_context.state` (chave definida na criação da sessão) e falha de forma segura se ausente
+* [x] garantir que **nenhuma** tool receba parâmetro `apartamento` escolhido pelo modelo (ou, se receber, que seja validado contra o da sessão)
+* [x] tool `listar_minhas_reservas`
+* [x] tool `verificar_disponibilidade(area, data)` → retorna só `livre`/`ocupada`
+* [x] tool `reservar_area(area, data)`: validar área existente; decidir confirmação pela **taxa lida do `areas.json`** (taxa > 0 → exige confirmação; taxa 0 → executa direto); conflito retorna mensagem de "data ocupada" sem código/apartamento do dono
+* [x] incluir em `detalhes` da confirmação de reserva: `area` e `data` (e taxa, opcional)
+* [x] tool `cancelar_reserva(...)` sem confirmação, só sobre reservas do apartamento da sessão; "não encontrada" sem revelar reservas alheias
+* [x] tool `listar_meus_visitantes`
+* [x] tool `autorizar_visitante(nome, data)` sempre exigindo confirmação, com `nome` e `data` em `detalhes`
+* [x] revisar todos os retornos das tools para que nunca contenham código, apartamento ou nome de outro apartamento
 
 ## Critérios de aceite
 
@@ -854,6 +854,14 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F6-2 — Startup:** `lifespan` chama `banco.criar_schema()` (idempotente); a carga dos dados iniciais continua sendo papel de `aurora-restaurar`.
 - **F6-3 — Validação:** `aurora-restaurar` + `aurora-api` + `curl`: 101 → `[{"codigo":"RSV-1377","area":"quadra","data":"2030-03-09"}]`; 302 visitantes → `[{"nome":"Marina Duarte","data":"2030-03-16"}]`; apartamento inexistente → `[]` (comportamento livre pelo enunciado). Sem erros no log.
 
+### Registro da Fase 7 (2026-09-27)
+
+- **F7-1 — Arquivos:** `aurora/tools/_sessao.py` (`apartamento_da_sessao`: única fonte do apartamento; valida contra `dados/apartamentos.json`), `aurora/tools/_confirmacao.py` (`exigir_confirmacao`: único ponto da Garantia 1 nas tools), `aurora/tools/reservas.py` (`listar_areas`, `listar_minhas_reservas`, `verificar_disponibilidade`, `reservar_area`, `cancelar_reserva`) e `aurora/tools/visitantes.py` (`listar_meus_visitantes`, `autorizar_visitante`).
+- **F7-2 — Regras no código:** `reservar_area` decide a confirmação por `Area.gera_cobranca` (taxa de `dados/areas.json`); `autorizar_visitante` sempre exige confirmação. A checagem de ocupação ocorre antes de pedir confirmação (evita pendência inútil), mas a exclusividade real é o INSERT (uma aprovação para data tomada no meio do caminho vira "ocupada"). `operacao_id = tool_context.function_call_id` (a confirmar na Fase 11 que o id é o mesmo na retomada).
+- **F7-3 — Cancelamento:** filtros opcionais `codigo`/`area`/`data`, sempre dentro das reservas do próprio apartamento. Com mais de uma candidata, devolve `ambigua` com as opções do próprio apartamento e não cancela nada. Com nenhuma, devolve `nao_encontrada` sem revelar reservas alheias.
+- **F7-4 — Declarações no ADK 2:** o schema dos parâmetros fica em `FunctionDeclaration.parameters_json_schema` (e não em `parameters`). Conferido: nenhuma tool expõe `apartamento` ou `tool_context` ao modelo.
+- **F7-5 — Validação:** script descartável `valida_fase7.py` com `ToolContext` simulado, 31 checagens OK, cobrindo os cenários dos passos 3–8, 10 e 11 no nível das tools. A varredura de todos os retornos da sessão do 101 não encontrou `RSV-4821`, `Marina Duarte` nem `302` isolado.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -876,7 +884,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 4  | Concluída | Fase 3          | `uv sync` OK, ADK 2.10.0 fixado, `aurora-api` sobe na 8000, stubs criados |
 | Fase 5  | Concluída | Fase 4          | `banco.py`/`dominio.py`/`restaurar.py`; 22/22 checagens, concorrência 10x8 processos OK |
 | Fase 6  | Concluída | Fase 5          | Rotas de verificação iguais ao contrato (passo 1 do avaliador OK) |
-| Fase 7  | Pendente | Fase 5           |           |
+| Fase 7  | Concluída | Fase 5          | Tools de reservas/visitantes; 31/31 checagens, sem vazamento de dados do 302 |
 | Fase 8  | Pendente | Fase 4           |           |
 | Fase 9  | Pendente | Fases 7, 8       |           |
 | Fase 10 | Pendente | Fases 6, 9       |           |
