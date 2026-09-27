@@ -63,6 +63,27 @@ class Runtime:
         mensagem = types.Content(role="user", parts=[types.Part(text=texto)])
         return await self._executar(session_id, mensagem)
 
+    async def responder_confirmacao(
+        self, sessao: Session, id_confirmacao: str, confirmado: bool
+    ) -> Resultado | None:
+        """Devolve a resposta do morador ao agente que pediu a confirmação.
+
+        Só aceita um id que esteja pendente nesta sessão no momento da chamada;
+        qualquer outro (inexistente, de outra sessão ou já respondido) devolve
+        None sem acionar o Runner. A checagem vem antes do Runner porque o ADK
+        reexecuta a tool se receber de novo a resposta de um id já respondido.
+        Quem chama deve segurar `trava(session_id)` para que duas respostas não
+        passem pela checagem ao mesmo tempo.
+        """
+        pendentes = {c["id"] for c in confirmacoes_pendentes(sessao)}
+        if id_confirmacao not in pendentes:
+            return None
+        resposta = types.FunctionResponse(
+            id=id_confirmacao, name=CONFIRMACAO, response={"confirmed": confirmado}
+        )
+        mensagem = types.Content(role="user", parts=[types.Part(function_response=resposta)])
+        return await self._executar(sessao.id, mensagem)
+
     async def _executar(self, session_id: str, mensagem: types.Content) -> Resultado:
         textos: list[str] = []
         async for evento in self.runner.run_async(

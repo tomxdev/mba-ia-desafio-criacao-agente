@@ -44,6 +44,11 @@ class Mensagem(BaseModel):
     texto: str
 
 
+class RespostaConfirmacao(BaseModel):
+    id: str
+    confirmado: bool
+
+
 class ConfirmacaoPendente(BaseModel):
     id: str
     acao: str
@@ -103,6 +108,32 @@ async def enviar_mensagem(session_id: str, corpo: Mensagem, request: Request) ->
             raise HTTPException(
                 status_code=503, detail="O assistente está indisponível no momento. Tente novamente."
             ) from erro
+    return _resposta(resultado)
+
+
+@app.post("/sessoes/{session_id}/confirmacoes", response_model=RespostaConversa)
+async def responder_confirmacao(
+    session_id: str, corpo: RespostaConfirmacao, request: Request
+) -> RespostaConversa:
+    """A confirmação vem do sistema, não da conversa (Garantia 1).
+
+    Só um id pendente nesta sessão é aceito; qualquer outro, inclusive o de
+    uma confirmação já respondida, recebe 409 e nada é executado.
+    """
+    runtime = _runtime(request)
+    async with runtime.trava(session_id):
+        sessao = await _sessao_ou_404(runtime, session_id)
+        try:
+            resultado = await runtime.responder_confirmacao(sessao, corpo.id, corpo.confirmado)
+        except Exception as erro:
+            logger.exception("Falha ao processar confirmação da sessão %s", session_id)
+            raise HTTPException(
+                status_code=503, detail="O assistente está indisponível no momento. Tente novamente."
+            ) from erro
+    if resultado is None:
+        raise HTTPException(
+            status_code=409, detail="Não existe confirmação pendente com esse id nesta sessão."
+        )
     return _resposta(resultado)
 
 

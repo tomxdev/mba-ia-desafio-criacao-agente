@@ -534,14 +534,14 @@ Implementar `POST /sessoes/{id}/confirmacoes`, devolvendo a resposta do morador 
 
 ## Tarefas
 
-* [ ] validar que o `id` está entre as pendências **atuais** da sessão; caso contrário responder `409` sem executar nada (inclui id inexistente e id já respondido)
-* [ ] construir a mensagem de resposta de confirmação no formato esperado pelo ADK (`FunctionResponse` do `adk_request_confirmation` com `confirmed` true/false)
-* [ ] enviar pelo Runner e garantir que a execução retoma no agente que pediu a confirmação
-* [ ] devolver `200` no mesmo formato da rota de mensagens
-* [ ] garantir que negar não grava nada e que aprovar grava exatamente uma vez
-* [ ] verificar que texto do morador do tipo "já estou confirmando" não resolve a pendência
-* [ ] testar aprovação após reiniciar a API com a pendência criada antes do reinício
-* [ ] registrar no plano a combinação final (topologia/App/session service) que funcionou
+* [x] validar que o `id` está entre as pendências **atuais** da sessão; caso contrário responder `409` sem executar nada (inclui id inexistente e id já respondido)
+* [x] construir a mensagem de resposta de confirmação no formato esperado pelo ADK (`FunctionResponse` do `adk_request_confirmation` com `confirmed` true/false)
+* [x] enviar pelo Runner e garantir que a execução retoma no agente que pediu a confirmação
+* [x] devolver `200` no mesmo formato da rota de mensagens
+* [x] garantir que negar não grava nada e que aprovar grava exatamente uma vez
+* [x] verificar que texto do morador do tipo "já estou confirmando" não resolve a pendência
+* [x] testar aprovação após reiniciar a API com a pendência criada antes do reinício
+* [x] registrar no plano a combinação final (topologia/App/session service) que funcionou
 
 ## Critérios de aceite
 
@@ -892,6 +892,28 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F10-4 — Erros:** sessão inexistente → `404` (mensagens e eventos); apartamento fora de `dados/apartamentos.json` → `422`; falha do modelo após as retentativas → `503` com mensagem (sem stack trace na resposta).
 - **F10-5 — Validação** (scratchpad `cliente.py` + `valida_fase10.py`, API real + Gemini Tier 1): 19/19 OK — passos 1–7 pela API, `404` do passo 9, 27 eventos com `cancelar_reserva`, `reservar_area` e `adk_request_confirmation`, nenhum erro no log. Com uma pendência aberta, uma nova mensagem responde normalmente, a pendência continua listada e nada executa (comportamento livre pelo enunciado).
 
+### Registro da Fase 11 (2026-09-27)
+
+- **F11-1 — Implementação:**
+  - `Runtime.responder_confirmacao` (em `aurora/runtime.py`) recalcula as pendentes da sessão persistida e, se o `id` não estiver entre elas, devolve `None` **sem chamar o Runner**. Caso contrário, envia `FunctionResponse(id, name="adk_request_confirmation", response={"confirmed": bool})`.
+  - A rota `POST /sessoes/{id}/confirmacoes` (em `aurora/api.py`) segura a trava da sessão, responde `404` para sessão inexistente, `409` para `None` e `200` no formato da rota de mensagens.
+- **F11-2 — Combinação final que funcionou:**
+  - topologia: principal → especialistas `chat` via `sub_agents`, sem `disallow_transfer_*`; regulamento via `AgentTool`;
+  - `App(resumability_config=ResumabilityConfig(is_resumable=True))`;
+  - `DatabaseSessionService` SQLite;
+  - `google-adk[db]==2.10.0`, modelo `gemini-flash-latest`.
+  A retomada chega ao especialista que pediu a confirmação, inclusive depois de reiniciar a API e quando o morador mandou outra mensagem entre o pedido e a aprovação.
+- **F11-3 — Validação** (scratchpad `valida_fase11.py`, API real, com reinício entre as partes A e B): 23/23 OK.
+  - passo 7: "já estou confirmando" no texto não executa; negar grava nada;
+  - aprovar um id já negado → 409;
+  - passo 8: aprovar → 1 reserva; reenvio → 409; os eventos mostram 1 execução bem-sucedida;
+  - passo 9: `id-inexistente` → 409;
+  - id pendente de outra sessão → 409;
+  - confirmação em sessão inexistente → 404;
+  - passo 11: pendente `{nome, data}` → aprovar → Joana 2030-04-21;
+  - pós-reinício: 2 pendências criadas antes do reinício aprovadas com sucesso (1 reserva cada), reenvio → 409.
+- **F11-4 — Risco residual (documentar no README):** se o modelo falhar (503 após retentativas) **depois** que o ADK já gravou a function response da confirmação, a pendência deixa de aparecer. A execução da tool em si é determinística e ocorre antes da chamada ao modelo que gera o texto, mas esse cenário não foi reproduzido. Mitigação existente: retentativas no modelo e `operacao_id` idempotente.
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -918,7 +940,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 8  | Concluída | Fase 4          | Parser por capítulo + tools; 12/12 checagens (instruções dos agentes conferidas na Fase 9) |
 | Fase 9  | Concluída | Fases 7, 8      | Agentes + App resumable; passos 3–12 com modelo real, 20/20 checagens; faturamento Tier 1 ativado |
 | Fase 10 | Concluída | Fases 6, 9      | Rotas de sessão/mensagem/eventos pela API; passos 1–7 e 404s, 19/19 checagens |
-| Fase 11 | Pendente | Fase 10          |           |
+| Fase 11 | Concluída | Fase 10         | Rota de confirmações + 409; aprovação após reinício OK; 23/23 checagens |
 | Fase 12 | Pendente | Fase 11          |           |
 | Fase 13 | Pendente | Fase 11          |           |
 | Fase 14 | Pendente | Fases 12, 13     |           |
