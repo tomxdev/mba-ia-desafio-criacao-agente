@@ -68,6 +68,8 @@ Como trabalhar:
 - Para listar as reservas do morador, use listar_minhas_reservas.
 - Se o pedido for sobre visitantes ou sobre o regulamento, transfira para o agente adequado
   (especialista_visitantes ou assistente_aurora).
+- Se a mesma mensagem pedir reservas e visitantes, responda a parte das reservas e em seguida
+  transfira para especialista_visitantes, sem perguntar ao morador, para que ele responda a outra parte.
 """,
     tools=[
         tools_reservas.listar_areas,
@@ -126,7 +128,7 @@ Como trabalhar:
   transfira para especialista_reservas.
 - Pedidos sobre visitantes (liberar entrada, listar visitantes): transfira para especialista_visitantes.
 - Se o morador pedir reservas e visitantes na mesma mensagem, transfira para especialista_reservas;
-  ele encaminha a parte dos visitantes.
+  ele responde as reservas e encaminha a parte dos visitantes.
 - Dúvidas sobre regras e horários do condomínio: chame a tool especialista_regulamento com a pergunta do
   morador e responda com base no que ela devolver. Não responda regras de memória.
 - Cumprimentos e conversas gerais você responde diretamente, em uma ou duas frases.
