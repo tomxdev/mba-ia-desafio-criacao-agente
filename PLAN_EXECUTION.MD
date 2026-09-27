@@ -867,7 +867,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F8-1 — Arquivos:** `aurora/regulamento.py` (`capitulos()` e `buscar_capitulo()`) e `aurora/tools/regulamento.py` (`listar_capitulos`, só número e tema; `consultar_capitulo(capitulo)`, com um capítulo por vez e referência em romano ou arábico, com ou sem "Capítulo").
 - **F8-2 — Formato do arquivo:** 14 cabeçalhos `## Capítulo <romano>: <tema>`, sem subtítulos; o arquivo fica com CRLF na cópia de trabalho do Windows (`autocrlf`), então o parser normaliza para LF. Os Arts. 1º–9º usam ordinal (`Art. 1º`) e os demais `Art. 10.`.
 - **F8-3 — Validação:** 12 checagens OK. Os capítulos concatenados reproduzem o documento exatamente; cada capítulo tem 1 cabeçalho e artigos exclusivos (Arts. 1–96); o Cap. IV traz "Aos domingos e feriados, a piscina funciona das 9h às 20h"; referência inválida ou texto livre dá erro; o índice tem 963 bytes, sem artigos; o maior retorno de consulta tem ~4,8 mil caracteres, contra ~43 mil do documento.
-- **F8-4 — Pendência para a Fase 9:** conferir que nenhuma instrução de agente contém texto do regulamento (o especialista só descobre os capítulos via `listar_capitulos`).
+- **F8-4 — Pendência resolvida na Fase 9:** nenhuma instrução de agente contém texto do regulamento. O principal não cita capítulos nem artigos (checado em `valida_fase9.py`), e o `especialista_regulamento` só descobre os capítulos via `listar_capitulos` (ver `aurora/agent.py`, F9-3).
 
 ### Registro da Fase 9 (2026-09-27)
 
