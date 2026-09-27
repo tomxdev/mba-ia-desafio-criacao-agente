@@ -493,12 +493,12 @@ Ligar os agentes à API via `App` + `Runner` com sessão persistida, implementan
 
 ## Tarefas
 
-* [ ] instanciar `DatabaseSessionService` (SQLite) e `App`/`Runner` conforme conclusões da Fase 2 (incluindo configuração de retomada, se necessária)
-* [ ] `POST /sessoes`: criar sessão com o apartamento no state inicial; responder `201 {"session_id"}`
-* [ ] `POST /sessoes/{id}/mensagens`: `404` se sessão não existe; rodar o Runner de forma async; concatenar o texto final do modelo em `resposta` (string vazia se parou em confirmação)
-* [ ] implementar extração de `confirmacoes_pendentes` a partir dos eventos da sessão (todas as pendências não respondidas), no formato `{id, acao, detalhes}`
-* [ ] `GET /sessoes/{id}/eventos`: `404` se não existe; devolver todos os eventos em ordem, serializados por completo
-* [ ] garantir que o apartamento no state não possa ser alterado por mensagens (somente leitura pelas tools)
+* [x] instanciar `DatabaseSessionService` (SQLite) e `App`/`Runner` conforme conclusões da Fase 2 (incluindo configuração de retomada, se necessária)
+* [x] `POST /sessoes`: criar sessão com o apartamento no state inicial; responder `201 {"session_id"}`
+* [x] `POST /sessoes/{id}/mensagens`: `404` se sessão não existe; rodar o Runner de forma async; concatenar o texto final do modelo em `resposta` (string vazia se parou em confirmação)
+* [x] implementar extração de `confirmacoes_pendentes` a partir dos eventos da sessão (todas as pendências não respondidas), no formato `{id, acao, detalhes}`
+* [x] `GET /sessoes/{id}/eventos`: `404` se não existe; devolver todos os eventos em ordem, serializados por completo
+* [x] garantir que o apartamento no state não possa ser alterado por mensagens (somente leitura pelas tools)
 
 ## Critérios de aceite
 
@@ -884,6 +884,14 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 - **F9-4 — Idempotência confirmada na retomada:** o `tool_context.function_call_id` na execução retomada é o id da chamada original (ex.: reserva `RSV-UJ36XQ` com `operacao_id=call_74494` = `originalFunctionCall.id` da confirmação `adk-76d75d4e`). Fecha a pendência de F7-2.
 - **F9-5 — Observação de UX (não é requisito):** no passo 3, o especialista de reservas respondeu as reservas e ofereceu transferir para visitantes em vez de responder os dois. Avaliar ajuste de instrução na Fase 14 se sobrar tempo.
 
+### Registro da Fase 10 (2026-09-27)
+
+- **F10-1 — Arquivos:** `aurora/runtime.py` (`Runtime`: `DatabaseSessionService` SQLite + `Runner(app=aurora.agent.app)`, `criar_sessao`, `obter_sessao`, `enviar_texto`, trava `asyncio.Lock` por sessão; funções `confirmacoes_pendentes(sessao)` e `serializar_eventos(sessao)`) e `aurora/api.py` (`POST /sessoes`, `POST /sessoes/{id}/mensagens`, `GET /sessoes/{id}/eventos`, com modelos Pydantic do contrato).
+- **F10-2 — `user_id` fixo (`"morador"`):** as rotas só recebem `session_id` e o `DatabaseSessionService.get_session` exige `user_id`; o apartamento fica só no state (`CHAVE_APARTAMENTO`), gravado em `criar_sessao`.
+- **F10-3 — Formato:** `resposta` junta os textos não-`thought` dos eventos do agente naquela execução (fica `""` quando para em confirmação). `confirmacoes_pendentes` é recalculado a partir dos eventos persistidos: `{"id": <id adk-...>, "acao": <nome da tool original>, "detalhes": <payload da confirmação>}`. Eventos são serializados com `model_dump(mode="json", exclude_none=True, by_alias=True)` (camelCase, como a API do ADK).
+- **F10-4 — Erros:** sessão inexistente → `404` (mensagens e eventos); apartamento fora de `dados/apartamentos.json` → `422`; falha do modelo após as retentativas → `503` com mensagem (sem stack trace na resposta).
+- **F10-5 — Validação** (scratchpad `cliente.py` + `valida_fase10.py`, API real + Gemini Tier 1): 19/19 OK — passos 1–7 pela API, `404` do passo 9, 27 eventos com `cancelar_reserva`, `reservar_area` e `adk_request_confirmation`, nenhum erro no log. Com uma pendência aberta, uma nova mensagem responde normalmente, a pendência continua listada e nada executa (comportamento livre pelo enunciado).
+
 # Riscos e pontos de atenção
 
 - **Retomada da confirmação (maior risco):** a resposta precisa chegar ao agente que pediu; depende de topologia, bloqueios de transferência, `App` e session service. Testar com SQLite persistido e após reinício.
@@ -909,7 +917,7 @@ Fonte: código-fonte de `google-adk==2.10.0` + protótipo descartável (scratchp
 | Fase 7  | Concluída | Fase 5          | Tools de reservas/visitantes; 31/31 checagens, sem vazamento de dados do 302 |
 | Fase 8  | Concluída | Fase 4          | Parser por capítulo + tools; 12/12 checagens (instruções dos agentes conferidas na Fase 9) |
 | Fase 9  | Concluída | Fases 7, 8      | Agentes + App resumable; passos 3–12 com modelo real, 20/20 checagens; faturamento Tier 1 ativado |
-| Fase 10 | Pendente | Fases 6, 9       |           |
+| Fase 10 | Concluída | Fases 6, 9      | Rotas de sessão/mensagem/eventos pela API; passos 1–7 e 404s, 19/19 checagens |
 | Fase 11 | Pendente | Fase 10          |           |
 | Fase 12 | Pendente | Fase 11          |           |
 | Fase 13 | Pendente | Fase 11          |           |
